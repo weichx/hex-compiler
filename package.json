@@ -1,0 +1,24 @@
+{
+  "name": "hex-compiler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/compiler.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/weichx/hex-compiler.git"
+  },
+  "author": "Matt Weichselbaum",
+  "devDependencies": {
+    "@types/node": "^7.0.13",
+    "chokidar": "^1.6.1",
+    "jasmine": "^2.5.3",
+    "typescript": "^2.2.2"
+  },
+  "dependencies": {
+    "@types/colors": "^1.1.3",
+    "colors": "^1.1.2"
+  }
+}
