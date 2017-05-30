@@ -2,14 +2,17 @@ import {StringMutator} from "../string_mutator";
 
 export class MethodEditor {
 
-    private methodName : string;
-    private context : StringMutator;
+    public readonly className : string;
+    public readonly methodName : string;
+    public readonly context : StringMutator;
+    public readonly statementList : Array<string>;
+    public readonly isCreating : boolean;
     private start : number;
-    private statementList : Array<string>;
-    private isCreating : boolean;
-    constructor(context : StringMutator, start : number, methodName : string, isCreating : boolean) {
+
+    constructor(context : StringMutator, start : number, className : string, methodName : string, isCreating : boolean) {
         this.context = context;
         this.start = start;
+        this.className = className;
         this.methodName = methodName;
         this.statementList = [];
         this.isCreating = isCreating;

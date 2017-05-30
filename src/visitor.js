@@ -4,7 +4,7 @@ var Visitor = (function () {
     function Visitor() {
     }
     Visitor.prototype.shouldVisitFile = function (ast) {
-        return false;
+        return true;
     };
     Visitor.prototype.filter = function (node) {
         return false;

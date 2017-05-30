@@ -1,9 +1,10 @@
 "use strict";
 exports.__esModule = true;
 var MethodEditor = (function () {
-    function MethodEditor(context, start, methodName, isCreating) {
+    function MethodEditor(context, start, className, methodName, isCreating) {
         this.context = context;
         this.start = start;
+        this.className = className;
         this.methodName = methodName;
         this.statementList = [];
         this.isCreating = isCreating;

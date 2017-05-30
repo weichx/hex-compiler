@@ -7,9 +7,11 @@ var colors = require("colors/safe");
 var file_data_1 = require("./file_data");
 var decorator_visitor_1 = require("./decorator_visitor");
 var visitor_context_1 = require("./visitor_context");
+var struct_visitor_1 = require("./struct_visitor");
+struct_visitor_1.StructVisitor;
 var scriptRegex = /\.tsx?$/i;
-var CompilerHost = (function () {
-    function CompilerHost(rootFiles) {
+var Compiler = (function () {
+    function Compiler(rootFiles, configFilePath) {
         this.rootFiles = rootFiles || [];
         this.files = {};
         this.outputMap = {};
@@ -19,12 +21,14 @@ var CompilerHost = (function () {
         this.decoratorMutators = [];
         this.service = ts.createLanguageService(this, ts.createDocumentRegistry());
         this.postprocessors.push(new decorator_visitor_1.DecoratorVisitor(this.decoratorMutators));
+        this.initialize(configFilePath);
     }
-    CompilerHost.prototype.initialize = function (configFilePath) {
+    Compiler.prototype.initialize = function (configFilePath) {
         var _this = this;
         if (!configFilePath) {
             configFilePath = path.join(path.resolve("."), "tsconfig.json");
         }
+        configFilePath = path.resolve(path.normalize(configFilePath));
         var configFile = ts.readConfigFile(configFilePath, ts.sys.readFile);
         if (configFile.error) {
             throw new Error(configFile.error.messageText);
@@ -32,35 +36,39 @@ var CompilerHost = (function () {
         var configParseResult = ts.parseJsonConfigFileContent(configFile.config, ts.sys, path.dirname(configFilePath));
         this.options = configParseResult.options;
         this.rootFiles = this.rootFiles || configParseResult.fileNames;
-        this.rootFiles.forEach(function (filePath) {
+        this.rootFiles.forEach(function (filePath, index) {
             var normalizedFilePath = path.resolve(path.normalize(filePath));
             _this.files[normalizedFilePath] = new file_data_1.FileData(normalizedFilePath);
+            _this.rootFiles[index] = normalizedFilePath;
         });
         return this;
     };
-    CompilerHost.prototype.addDecoratorMutator = function (mutator) {
+    Compiler.prototype.addDecoratorMutator = function (mutator) {
         this.decoratorMutators.push(mutator);
     };
-    CompilerHost.prototype.getProjectVersion = function () {
+    Compiler.prototype.addVisitor = function (visitor) {
+        this.postprocessors.push(visitor);
+    };
+    Compiler.prototype.getProjectVersion = function () {
         return this.version.toString();
     };
-    CompilerHost.prototype.getCompilationSettings = function () {
+    Compiler.prototype.getCompilationSettings = function () {
         return this.options;
     };
-    CompilerHost.prototype.getNewLine = function () {
+    Compiler.prototype.getNewLine = function () {
         return os.EOL;
     };
-    CompilerHost.prototype.getScriptFileNames = function () {
+    Compiler.prototype.getScriptFileNames = function () {
         var _this = this;
         return Object.keys(this.files).filter(function (f) {
             return _this.files[f].filePath.match(scriptRegex);
         });
     };
-    CompilerHost.prototype.getScriptVersion = function (fileName) {
+    Compiler.prototype.getScriptVersion = function (fileName) {
         fileName = path.normalize(fileName);
         return this.files[fileName] && this.files[fileName].getVersion();
     };
-    CompilerHost.prototype.getScriptSnapshot = function (fileName) {
+    Compiler.prototype.getScriptSnapshot = function (fileName) {
         fileName = path.normalize(fileName);
         var file = this.files[fileName] = this.files[fileName] || new file_data_1.FileData(fileName);
         if (!file.text)
@@ -70,16 +78,16 @@ var CompilerHost = (function () {
         file.snapshot = file.snapshot || ts.ScriptSnapshot.fromString(file.text);
         return file.snapshot;
     };
-    CompilerHost.prototype.getCurrentDirectory = function () {
+    Compiler.prototype.getCurrentDirectory = function () {
         return process.cwd();
     };
-    CompilerHost.prototype.getDefaultLibFileName = function (options) {
+    Compiler.prototype.getDefaultLibFileName = function (options) {
         return ts.getDefaultLibFilePath(options);
     };
-    CompilerHost.prototype.log = function (message) {
+    Compiler.prototype.log = function (message) {
         console.log(message);
     };
-    CompilerHost.prototype.resolveModuleNames = function (moduleNames, containingFile) {
+    Compiler.prototype.resolveModuleNames = function (moduleNames, containingFile) {
         var normalizedPath = path.normalize(containingFile);
         var file = this.files[normalizedPath];
         var retn = new Array(moduleNames.length);
@@ -94,43 +102,13 @@ var CompilerHost = (function () {
                 file.forwardDependencies.push({ raw: moduleName, resolved: resultPath });
             }
             else {
-                console.log("Cant find ", normalizedPath);
+                // console.log("Cant find ", normalizedPath);
                 retn[i] = void 0;
             }
         }
         return retn;
     };
-    CompilerHost.prototype.compileFile = function (filePath) {
-        var file = this.files[filePath];
-        var queue = [];
-        var hasErrors = false;
-        var outputMap = {};
-        queue.push(file);
-        for (var i = 0; i < file.forwardDependencies.length; i++) {
-            delete this.outputMap[file.forwardDependencies[i].resolved];
-        }
-        //for(let i = 0; i < file.reverseDependencies.length; i++) {
-        ////     delete this.outputMap[file.forwardDependencies[i].resolved];
-        ////
-        // }
-        while (queue.length) {
-            var file_1 = queue.pop();
-            outputMap[file_1.filePath] = this.service.getEmitOutput(file_1.filePath);
-            hasErrors = hasErrors || this.errorCheck(file_1);
-            for (var j = 0; j < file_1.forwardDependencies.length; j++) {
-                var depFile = this.files[file_1.forwardDependencies[j].resolved];
-                if (!depFile) {
-                    console.log(file_1.forwardDependencies[j].resolved);
-                    continue;
-                }
-                if (!outputMap[depFile.filePath] && queue.indexOf(depFile) === -1) {
-                    queue.push(depFile);
-                }
-            }
-        }
-        return hasErrors ? null : this.createOutput(outputMap);
-    };
-    CompilerHost.prototype.compile = function () {
+    Compiler.prototype.compile = function () {
         var filePaths = Object.keys(this.files);
         var outputMap = {};
         var queue = [];
@@ -149,7 +127,7 @@ var CompilerHost = (function () {
             for (var j = 0; j < file.forwardDependencies.length; j++) {
                 var depFile = this.files[file.forwardDependencies[j].resolved];
                 if (!depFile) {
-                    console.log(file.forwardDependencies[j].resolved);
+                    // console.log("cant find:", file.forwardDependencies[j].resolved);
                     continue;
                 }
                 if (!outputMap[depFile.filePath] && queue.indexOf(depFile) === -1) {
@@ -159,40 +137,136 @@ var CompilerHost = (function () {
         }
         return hasErrors ? null : this.createOutput(outputMap);
     };
-    CompilerHost.prototype.createOutput = function (outputMap) {
+    //not sure if checker is available
+    Compiler.prototype.compileChangedFiles = function () {
+        var changedFiles = [];
+        for (var i = 0; i < changedFiles.length; i++) {
+            var file = changedFiles[i];
+            file.text = ts.sys.readFile(file.filePath);
+        }
+        //createSourceFile
+        //foreach changed file
+        //run visitors & update file snapshot
+        //get emit output for changed files
+        var queue = [];
+        var outputMap = {};
+        var hasErrors = false;
+        //also recompile everything the changed file touches
+        while (queue.length) {
+            var file = queue.pop();
+            if (file.isTextDirty) {
+                var compiledText = this.service.getEmitOutput(file.filePath);
+            }
+            else {
+                outputMap[file.filePath] = file.compiledText;
+            }
+            hasErrors = hasErrors || this.errorCheck(file);
+            for (var j = 0; j < file.forwardDependencies.length; j++) {
+                var depFile = this.files[file.forwardDependencies[j].resolved];
+                if (!depFile) {
+                    console.log("cant find:", file.forwardDependencies[j].resolved);
+                    continue;
+                }
+                if (!outputMap[depFile.filePath] && queue.indexOf(depFile) === -1) {
+                    queue.push(depFile);
+                }
+            }
+        }
+    };
+    Compiler.prototype.createOutput = function (outputMap) {
         var finalFilePaths = Object.keys(outputMap);
-        var retn = this.getHeader(finalFilePaths) + "([";
+        var retn = this.getHeader(finalFilePaths) + "({";
         for (var i = 0; i < finalFilePaths.length; i++) {
             var file = this.files[finalFilePaths[i]];
             var filePath = file.filePath;
             var output = outputMap[filePath];
-            var text = output.outputFiles[0].text;
-            text = this.replaceText(text, 'Object.defineProperty(exports, "__esModule", { value: true });', "");
-            for (var j = 0; j < file.forwardDependencies.length; j++) {
-                var dep = file.forwardDependencies[j];
-                var targetString = "require(\"" + dep.raw + "\")";
-                var replaced = "_require(" + finalFilePaths.indexOf(dep.resolved) + ")";
-                text = this.replaceText(text, targetString, replaced);
+            if (output.outputFiles[0]) {
+                var text_1 = output.outputFiles[0].text;
+                text_1 = this.replaceText(text_1, 'Object.defineProperty(exports, "__esModule", { value: true });', "");
+                for (var j = 0; j < file.forwardDependencies.length; j++) {
+                    var dep = file.forwardDependencies[j];
+                    var targetString = "require(\"" + dep.raw + "\")";
+                    var replaced = "require(" + finalFilePaths.indexOf(dep.resolved) + ")";
+                    text_1 = this.replaceText(text_1, targetString, replaced);
+                }
+                retn += this.wrap(i.toString(), text_1);
+                if (i !== finalFilePaths.length - 1) {
+                    retn += ",";
+                }
             }
-            retn += this.wrap(text);
-            if (i !== finalFilePaths.length - 1) {
-                retn += ",";
+            else {
+                //todo this isn't the best
+                if (file.filePath.indexOf("node_modules") !== -1) {
+                    if (filePath.indexOf("@types") !== -1) {
+                        var lastSlash = file.filePath.lastIndexOf("/");
+                        var baseFileName = path.basename(file.filePath.substring(0, lastSlash));
+                        var fname = path.resolve(path.join("./node_modules", baseFileName, "dist", baseFileName + ".js"));
+                        var text = ts.sys.readFile(fname);
+                        retn += this.wrap(baseFileName, text);
+                        var idx = finalFilePaths.indexOf(file.filePath);
+                        if (idx !== -1) {
+                            retn += "," + this.wrap(idx.toString(), "module.exports = require('" + baseFileName + "');");
+                        }
+                        if (i !== finalFilePaths.length - 1) {
+                            retn += ",";
+                        }
+                    }
+                    else {
+                        var moduleIdx = filePath.indexOf("node_modules");
+                        var fname = filePath.replace(".d.ts", ".js");
+                        console.log(fname);
+                        var text = ts.sys.readFile(fname);
+                        retn += this.wrap(baseFileName, text);
+                        var idx = finalFilePaths.indexOf(file.filePath);
+                        if (idx !== -1) {
+                            retn += "," + this.wrap(idx.toString(), "module.exports = require('" + baseFileName + "');");
+                        }
+                        if (i !== finalFilePaths.length - 1) {
+                            retn += ",";
+                        }
+                    }
+                }
+                else {
+                    console.log('cant find it' + file.filePath);
+                }
             }
         }
-        retn += "])";
+        retn += "})";
         return retn;
     };
-    CompilerHost.prototype.errorCheck = function (file) {
+    Compiler.prototype.errorCheck = function (file) {
         var diag = this.service.getSemanticDiagnostics(file.filePath)
             .concat(this.service.getSyntacticDiagnostics(file.filePath))
             .map(function (diagnostic) {
             var _a = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start), line = _a.line, character = _a.character;
             var message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
-            console.error(colors.bgRed(diagnostic.file.fileName + " (" + (line + 1) + "," + (character + 1) + "): " + message));
+            return {
+                line: line, character: character, message: message, diagnostic: diagnostic
+            };
         });
+        if (diag.length > 0) {
+            var printedErrors = {};
+            for (var i = 0; i < diag.length; i++) {
+                var d = diag[0];
+                if (printedErrors[d.message]) {
+                    continue;
+                }
+                printedErrors[d.message] = true;
+                var line = d.line;
+                var start = line > 5 ? line - 5 : 0;
+                var end = start + 10;
+                var split = d.diagnostic.file.getText().split("\n");
+                var count = 1;
+                var errorString = split.slice(start, end)
+                    .map(function (l) { return (start + (++count)) + ":" + l; })
+                    .join("\n");
+                console.error(colors.bgRed(d.diagnostic.file.fileName + " (" + line + "," + d.character + "): " + d.message));
+                console.log(colors.bgBlue(errorString));
+            }
+        }
         return (diag.length > 0);
     };
-    CompilerHost.prototype.replaceText = function (sourceText, targetString, replacedContent) {
+    Compiler.prototype.replaceText = function (sourceText, targetString, replacedContent) {
         var idx = sourceText.indexOf(targetString);
         if (idx !== -1) {
             return sourceText.substring(0, idx) +
@@ -201,7 +275,7 @@ var CompilerHost = (function () {
         }
         return sourceText;
     };
-    CompilerHost.prototype.getHeader = function (outputFilePaths) {
+    Compiler.prototype.getHeader = function (outputFilePaths) {
         var requireRoots = "";
         for (var i = 0; i < this.rootFiles.length; i++) {
             var file = this.files[this.rootFiles[i]];
@@ -211,10 +285,43 @@ var CompilerHost = (function () {
         }
         return "\n        (function(modules) {\n           const cache = {};\n           function requireModule(moduleId) {\n               if(!cache[moduleId]) {\n                   const module = cache[moduleId] = { exports: {} };\n                   modules[moduleId].call(module.exports, module, module.exports, requireModule);\n               }\n               return cache[moduleId].exports;\n           }\n           " + requireRoots + "\n        })";
     };
-    CompilerHost.prototype.wrap = function (text) {
-        return "function(module, exports, _require) {\n            " + text + "\n        }";
+    Compiler.prototype.wrap = function (name, text) {
+        return "\"" + name + "\": function(module, exports, require) {\n            " + text + "\n        }";
     };
-    CompilerHost.prototype.postprocessVisitors = function () {
+    Compiler.prototype.onFileChanged = function (filePath) {
+        var file = this.files[filePath];
+        var ast = this.service.getProgram().getSourceFile(filePath);
+        //todo batch file changes
+    };
+    Compiler.prototype.runVisitors = function (fileData) {
+        var ast = this.service.getProgram().getSourceFile(fileData.filePath);
+        var context = new visitor_context_1.VisitorContext(ast, this.service);
+        var file = this.files[ast.fileName];
+        var statements = ast.statements;
+        for (var i = 0; i < this.postprocessors.length; i++) {
+            var visitor = this.postprocessors[i];
+            if (!visitor.shouldVisitFile(ast)) {
+                continue;
+            }
+            visitor.beforeVisit(ast, context);
+            //todo as is we may not find things nested outside the root level
+            for (var j = 0; j < statements.length; j++) {
+                var statement = statements[j];
+                if (visitor.filter(statement)) {
+                    visitor.visit(statement, context);
+                }
+            }
+            visitor.afterVisit(ast, context);
+        }
+        var newSource = context.applyMutations();
+        if (newSource !== ast.text) {
+            this.version++;
+            file.version++;
+            file.text = newSource;
+            file.snapshot = ts.ScriptSnapshot.fromString(newSource);
+        }
+    };
+    Compiler.prototype.postprocessVisitors = function () {
         var _this = this;
         this.service.getProgram().getSourceFiles().forEach(function (ast) {
             var context = new visitor_context_1.VisitorContext(ast, _this.service);
@@ -244,6 +351,6 @@ var CompilerHost = (function () {
         });
         this.version++;
     };
-    return CompilerHost;
+    return Compiler;
 }());
-exports.CompilerHost = CompilerHost;
+exports.Compiler = Compiler;

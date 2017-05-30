@@ -10,7 +10,7 @@ export class File1Class {
     public get propertyAccessor1() : number {
         return 10101010;
     }
-
+//CLASS_END
 }
 
 

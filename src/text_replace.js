@@ -16,13 +16,14 @@ var TextReplace = (function (_super) {
     function TextReplace(start, end, content) {
         var _this = _super.call(this, start, end, content) || this;
         var replacedLength = end - start;
-        if (replacedLength > content.length) {
-            _this.offset = content.length - replacedLength;
-        }
-        else {
-            _this.offset = replacedLength - content.length;
-        }
+        _this.offset = content.length - replacedLength;
         return _this;
+        //
+        // if(replacedLength < content.length) {
+        // }
+        // else {
+        //     this.offset = content.length - replacedLength;
+        // }
     }
     TextReplace.prototype.apply = function (text) {
         var start = text.substring(0, this.start);

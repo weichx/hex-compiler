@@ -16,6 +16,9 @@ var TextMutation = (function () {
         return start + this.content + end;
     };
     TextMutation.prototype.overlaps = function (range) {
+        if (this.start === range.start && this.end === range.end) {
+            return false;
+        }
         return ((this.start > range.start && this.start <= range.end) ||
             (this.end >= range.start && this.end <= range.end));
     };

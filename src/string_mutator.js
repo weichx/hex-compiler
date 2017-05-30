@@ -9,6 +9,9 @@ var StringMutator = (function () {
         this.appendStrings = [];
         this.mutations = [];
     }
+    StringMutator.prototype.insertOnNewLine = function (position, str) {
+        this.insert(position, "\n" + str + '\n');
+    };
     StringMutator.prototype.insertLine = function (position, str) {
         this.insert(position, str + '\n');
     };
@@ -41,13 +44,13 @@ var StringMutator = (function () {
         if (invalid) {
             throw new Error("Mutation is invalid! " + JSON.stringify(mutation, null, 4));
         }
-        for (var i = 0; i < this.mutations.length; i++) {
-            if (this.mutations[i].overlaps(mutation)) {
-                throw new Error("Mutations overlap! " +
-                    JSON.stringify(this.mutations[i], null, 4) +
-                    JSON.stringify(mutation, null, 4));
-            }
-        }
+        // for (let i = 0; i < this.mutations.length; i++) {
+        //     if (this.mutations[i].overlaps(mutation)) {
+        //        throw new Error("Mutations overlap! " +
+        //            JSON.stringify(this.mutations[i], null, 4) +
+        //            JSON.stringify(mutation, null, 4));
+        //     }
+        // }
         this.mutations.push(mutation);
     };
     StringMutator.prototype.applyMutations = function () {
@@ -65,7 +68,7 @@ var StringMutator = (function () {
         });
         while (this.mutations.length) {
             var mutation = this.mutations.shift();
-            this.text = mutation.apply(this.text); //
+            this.text = mutation.apply(this.text);
             this.offsetMutations(mutation.offset);
         }
     };

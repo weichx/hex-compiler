@@ -4,7 +4,7 @@
     "noImplicitAny": true,
     "outDir": "./build/",
     "preserveConstEnums": false,
-    "removeComments": false,
+    "removeComments": true,
     "target": "ES6",
     "module": "commonjs",
     "stripInternal": true,

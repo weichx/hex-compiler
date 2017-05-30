@@ -20,6 +20,9 @@ export class TextMutation {
     }
 
     public overlaps(range : TextMutation) : boolean {
+        if(this.start === range.start && this.end === range.end) {
+            return false;
+        }
         return (
             (this.start > range.start && this.start <= range.end) ||
             (this.end >= range.start && this.end <= range.end)

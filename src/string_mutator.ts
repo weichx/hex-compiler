@@ -15,6 +15,10 @@ export class StringMutator {
         this.mutations = [];
     }
 
+    public insertOnNewLine(position : number, str : string) : void {
+        this.insert(position, "\n" + str + '\n');
+    }
+
     public insertLine(position : number, str : string) : void {
         this.insert(position, str + '\n');
     }
@@ -60,13 +64,13 @@ export class StringMutator {
             throw new Error("Mutation is invalid! " + JSON.stringify(mutation, null, 4));
         }
 
-        for (let i = 0; i < this.mutations.length; i++) {
-            if (this.mutations[i].overlaps(mutation)) {
-                throw new Error("Mutations overlap! " +
-                    JSON.stringify(this.mutations[i], null, 4) +
-                    JSON.stringify(mutation, null, 4));
-            }
-        }
+        // for (let i = 0; i < this.mutations.length; i++) {
+        //     if (this.mutations[i].overlaps(mutation)) {
+        //        throw new Error("Mutations overlap! " +
+        //            JSON.stringify(this.mutations[i], null, 4) +
+        //            JSON.stringify(mutation, null, 4));
+        //     }
+        // }
 
         this.mutations.push(mutation);
     }
@@ -86,9 +90,8 @@ export class StringMutator {
         });
 
         while (this.mutations.length) {
-
             const mutation = this.mutations.shift();
-            this.text = mutation.apply(this.text);//
+            this.text = mutation.apply(this.text);
             this.offsetMutations(mutation.offset);
 
         }

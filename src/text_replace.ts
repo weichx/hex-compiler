@@ -5,12 +5,13 @@ export class TextReplace extends TextMutation {
     constructor(start : number, end : number, content : string) {
         super(start, end, content);
         const replacedLength = end - start;
-        if(replacedLength > content.length) {
-            this.offset = content.length - replacedLength;
-        }
-        else {
-            this.offset = replacedLength - content.length;
-        }
+        this.offset = content.length - replacedLength;
+        //
+        // if(replacedLength < content.length) {
+        // }
+        // else {
+        //     this.offset = content.length - replacedLength;
+        // }
     }
 
     public apply(text : string) {

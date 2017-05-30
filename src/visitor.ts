@@ -4,7 +4,7 @@ import {VisitorContext} from "./visitor_context";
 export class Visitor {
 
     public shouldVisitFile(ast : ts.SourceFile) : boolean {
-        return false;
+        return true;
     }
 
     public filter(node : ts.Node) : boolean {
