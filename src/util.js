@@ -294,6 +294,20 @@ function getAssignedExpression(variableStatement) {
 exports.getAssignedExpression = getAssignedExpression;
 function makeVariableName(prefix) {
     if (prefix === void 0) { prefix = ""; }
-    return "_$_" + prefix + (Math.random() * 999 | 0).toString();
+    return "_$_" + prefix + (Math.random() * 99999 | 0).toString();
 }
 exports.makeVariableName = makeVariableName;
+function findAllDescendantsOfTypeWithName(node, kind, name) {
+    if (node.getText().indexOf(name) === -1)
+        return [];
+    var out = new Array();
+    function recurse(child) {
+        if (child.kind === kind && child.getText() === name) {
+            out.push(child);
+        }
+        ts.forEachChild(child, recurse);
+    }
+    recurse(node);
+    return out;
+}
+exports.findAllDescendantsOfTypeWithName = findAllDescendantsOfTypeWithName;

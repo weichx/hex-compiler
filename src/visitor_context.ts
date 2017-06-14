@@ -79,6 +79,10 @@ export class VisitorContext extends StringMutator {
         this.remove(node.getStart(), node.getEnd());
     }
 
+    public replaceNode(node : ts.Node, text : string) {
+        this.replace(node.getStart(), node.getEnd(), text);
+    }
+
     public getNodeName(node : ts.Node) {
         let name = (node as any).name;
         if(name) {

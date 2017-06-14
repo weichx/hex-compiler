@@ -8,7 +8,7 @@ import {DecoratorVisitor} from "./decorator_visitor";
 import {VisitorContext} from "./visitor_context";
 import {StructVisitor} from "./struct_visitor";
 StructVisitor;
-// var x = new StructVisitor();
+
 interface Indexable<T> {
     [idx : string] : T;
 }

@@ -80,6 +80,9 @@ var VisitorContext = (function (_super) {
     VisitorContext.prototype.removeNode = function (node) {
         this.remove(node.getStart(), node.getEnd());
     };
+    VisitorContext.prototype.replaceNode = function (node, text) {
+        this.replace(node.getStart(), node.getEnd(), text);
+    };
     VisitorContext.prototype.getNodeName = function (node) {
         var name = node.name;
         if (name) {

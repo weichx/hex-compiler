@@ -295,5 +295,18 @@ export function getAssignedExpression(variableStatement : ts.VariableStatement) 
 }
 
 export function makeVariableName(prefix = "") : string {
-    return "_$_" + prefix + (Math.random() * 999 | 0).toString();
+    return "_$_" + prefix + (Math.random() * 99999 | 0).toString();
+}
+
+export function findAllDescendantsOfTypeWithName(node : ts.Node, kind : ts.SyntaxKind, name : string) {
+    if(node.getText().indexOf(name) === -1) return [];
+    const out = new Array<ts.Node>();
+    function recurse(child : ts.Node) {
+        if(child.kind === kind && child.getText() === name) {
+            out.push(child);
+        }
+        ts.forEachChild(child, recurse);
+    }
+    recurse(node);
+    return out;
 }

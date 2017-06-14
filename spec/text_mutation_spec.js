@@ -66,6 +66,16 @@ describe("StringMutator", function() {
     //     }).toThrow();
     // });
 
+    fit("should do the right thing", function () {
+        var str = "struct2.uiElementId = transformData.childCount;"
+        const ctx = new StringMutator(str);
+        var index = str.indexOf("transformData.childCount");
+        var length = "transformData.childCount".length;
+        ctx.replace(index, index + length, "Replaced1");
+        ctx.replace(0, "struct2.uiElementId".length, "Replaced0");
+        expect(ctx.applyMutations()).toBe("Replaced0 = Replaced1;")
+    });
+
     it("should apply multiple mutations", function () {
         const ctx = new StringMutator("hello_world");
         ctx.remove(2, 4);
